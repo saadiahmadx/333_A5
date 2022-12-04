@@ -6,9 +6,60 @@ import sys
 import argparse
 import socket
 import pickle
+import threading
+import queue as queuemod
 import PyQt5.QtCore as core
 import PyQt5.QtWidgets as wid
 import PyQt5.QtGui as gui
+
+class WorkerThread (threading.Thread):
+
+    def __init__(self, host, port, dept, coursenum, area, title, queue):
+        threading.Thread.__init__(self)
+        self._host = host
+        self._port = port
+        self._dept = dept
+        self._coursenum = coursenum
+        self._area = area
+        self._title = title
+        self._queue = queue
+        self._should_stop = False
+
+    def stop(self):
+        self._should_stop = True
+
+    def run(self):
+        try:
+            with socket.socket() as sock:
+                sock.connect((self._host, self._port))
+
+                out_flo = sock.makefile(mode="wb", encoding="utf-8")
+                pickle.dump(self._dept, self._coursenum, self._area, self._title, out_flo)
+                out_flo.flush()
+
+                in_flo = sock.makefile(mode="rb", encoding="utf-8")
+                courses = pickle.load(in_flo)
+                self._queue.put((True, courses))
+
+            if courses == "":
+                print("The reg server crashed", file=sys.stderr)
+            else:
+                list.clear()
+                index = 0
+                for course in courses:
+                    course_item = wid.QListWidgetItem()
+                    course_item.setText(course.get('id').rjust(5)
+                                        + course.get('dept').rjust(4)
+                                        + course.get('coursenum').rjust(5)
+                                        + course.get('area').rjust(4)+" "
+                                        + course.get('title').ljust(100))
+                    course_item.setData(core.Qt.UserRole, course.get('id'))
+                    list.insertItem(index, course_item)
+                    index += 1
+
+        except Exception as ex:
+            self._queue.put((False, ex))
+
 
 
 class ListWidget(wid.QListWidget):
@@ -58,8 +109,6 @@ def query_server_regdetails(args, window, classid):
         print("A server error occurred. Please contact the system administrator.")
 
 # Query reg server
-
-
 def query_server_reg(args, query, list):
     """
     inputs: command arguments
@@ -98,17 +147,8 @@ def query_server_reg(args, query, list):
     except Exception:
         print("A server error occurred. Please contact the system administrator.")
 
-# Runs Application
 
-
-def main(args):
-    """
-    input: host, port arguments
-
-    output: GUI Registrar window
-    """
-    app = wid.QApplication(sys.argv)
-
+def create_widgets(args):
     dept_label = wid.QLabel(
         " Department: ", alignment=core.Qt.AlignRight)
     coursenum_label = wid.QLabel(
@@ -157,35 +197,85 @@ def main(args):
 
     return_list._window = window
     return_list.itemClicked.connect(return_list.clicked)
+    
+    return (window, dept_input,
+    coursenum_input,
+    area_input,
+    title_input, return_list)
 
-    dept_input.textEdited.connect(lambda: query_server_reg(args,
-                                                           {'dept': dept_input.text(),
-                                                            'num': coursenum_input.text(),
-                                                               'area': area_input.text(),
-                                                               'title': title_input.text()}, return_list))
-    coursenum_input.textEdited.connect(lambda: query_server_reg(args,
-                                                                {'dept': dept_input.text(),
-                                                                 'num': coursenum_input.text(),
-                                                                    'area': area_input.text(),
-                                                                    'title': title_input.text()}, return_list))
-    area_input.textEdited.connect(lambda: query_server_reg(args,
-                                                           {'dept': dept_input.text(),
-                                                            'num': coursenum_input.text(),
-                                                               'area': area_input.text(),
-                                                               'title': title_input.text()}, return_list))
-    title_input.textEdited.connect(lambda: query_server_reg(args,
-                                                            {'dept': dept_input.text(),
-                                                             'num': coursenum_input.text(),
-                                                                'area': area_input.text(),
-                                                                'title': title_input.text()}, return_list))
 
-    query_server_reg(args,
-                     {'dept': dept_input.text(),
-                      'num': coursenum_input.text(),
-                      'area': area_input.text(),
-                      'title': title_input.text()}, return_list)
+# TODO: adapt this to get it working
+# def poll_queue_helper(queue, return_list):
+#     while True:
+#         try:
+#             item = queue.get(block=False)
+#         except queuemod.Empty:
+#             break
+#         return_list.clear()
+#         successful, data = item
+#         if successful:
+#             courses = data
+#             if len(courses) == 0:
+                
+#             else:
+
+#         else:
+#             ex = data
+#             return_list.insertPlainText(str(ex))
+#             return_list.repaint()
+
+# Runs Application
+def main(args):
+    """
+    input: host, port arguments
+
+    output: GUI Registrar window
+    """
+    window, dept_input, coursenum_input, area_input, title_input, return_list = create_widgets(args)
+    queue = queuemod.Queue()
+    app = wid.QApplication(sys.argv)
+
+    def poll_queue():
+        poll_queue_helper(queue, return_list) #TODO: get this working
+    timer = core.QTimer()
+    timer.timeout.connect(poll_queue)
+    timer.setInterval(100) # milliseconds
+    timer.start()
+    
+    worker_thread = None
+    def reg_slot():
+        nonlocal worker_thread
+        dept = dept_input.text()
+        coursenum = coursenum_input.text()
+        area = area_input.text()
+        title = title_input.text()
+        if worker_thread is not None:
+            worker_thread.stop()
+        worker_thread = WorkerThread(host, port, dept, coursenum, area, title, queue)
+        worker_thread.start()
+        dept_input.textEdited.connect(lambda: query_server_reg(args,
+                                                           {'dept': dept,
+                                                            'num': coursenum,
+                                                               'area': area,
+                                                               'title': title}, return_list))
+        coursenum_input.textEdited.connect(lambda: query_server_reg(args,
+                                                                {'dept': dept,
+                                                                 'num': coursenum,
+                                                                    'area': area,
+                                                                    'title': title}, return_list))
+        area_input.textEdited.connect(lambda: query_server_reg(args,
+                                                           {'dept': dept,
+                                                            'num': coursenum,
+                                                               'area': area,
+                                                               'title': title}, return_list))
+        title_input.textEdited.connect(lambda: query_server_reg(args,
+                                                            {'dept': dept,
+                                                             'num': coursenum,
+                                                                'area': area,
+                                                                'title': title}, return_list))
 
     window.show()
+    reg_slot()
     sys.exit(app.exec_())
 
 
