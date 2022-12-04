@@ -9,6 +9,8 @@ import argparse
 import contextlib
 import sqlite3
 import time
+import multiprocessing
+
 
 def consume_cpu_time(delay):
     initial_time = time.process_time()
@@ -16,6 +18,8 @@ def consume_cpu_time(delay):
         pass
 
 # Sanitize text input
+
+
 def sanitize(field):
     """
     input: string field
@@ -220,36 +224,43 @@ def get_class_details(class_id, out_flo):
         print(sys.argv[0] + ": " + str(ex), file=sys.stderr)
 
 # Client handler
+
+
 def handle_client(sock, delay):
     """
     input:
-    client-socket, busy-wait delay
+    client-socket, 
+    busy-wait delay
     output:
     prints-logs
     """
-    # Read query from client
-    in_flo = sock.makefile(mode="rb", encoding="utf-8")
-    query = pickle.load(in_flo)
-    in_flo.flush()
-    print("Read from client: " + str(query))
-    consume_cpu_time(delay)
-    if type(query) is dict:
-        # Run SQLite functions and find classes
-        classes = filter_classes(query.get('dept'),
-                                 query.get('num'),
-                                 query.get('area'),
-                                 query.get('title'))
-        # Write classes back to client
-        out_flo = sock.makefile(mode="wb", encoding="utf-8")
-        pickle.dump(classes, out_flo)
-        out_flo.flush()
-        print("Wrote "+str(len(classes))+" classes to client")
-    else:
-        # Write classes back to client
-        out_flo = sock.makefile(mode="w", encoding="utf-8")
-        class_details = get_class_details(query, out_flo)
-        out_flo.flush()
-        print("Wrote class details ("+query+") to client")
+    try:
+        # Read query from client
+        in_flo = sock.makefile(mode="rb", encoding="utf-8")
+        query = pickle.load(in_flo)
+        in_flo.flush()
+        print("Read from client: " + str(query))
+        consume_cpu_time(delay)
+        if type(query) is dict:
+            # Run SQLite functions and find classes
+            classes = filter_classes(query.get('dept'),
+                                    query.get('num'),
+                                    query.get('area'),
+                                    query.get('title'))
+            # Write classes back to client
+            out_flo = sock.makefile(mode="wb", encoding="utf-8")
+            pickle.dump(classes, out_flo)
+            out_flo.flush()
+            print("Wrote "+str(len(classes))+" classes to client")
+        else:
+            # Write classes back to client
+            out_flo = sock.makefile(mode="w", encoding="utf-8")
+            class_details = get_class_details(query, out_flo)
+            out_flo.flush()
+            print("Wrote class details ("+query+") to client")
+    except Exception as ex:
+        print(ex, file=sys.stderr)
+        sys.exit(1)
 
 
 # Main server code
@@ -262,8 +273,6 @@ def main(args):
     try:
         delay = args.delay
         port = args.port
-        children = []
-        socks = []
         server_sock = socket.socket()
         print("Opened server socket")
 
@@ -281,19 +290,26 @@ def main(args):
             try:
                 sock, client_addr = server_sock.accept()
                 with sock:
-                    pid = os.fork()
-                    if pid > 0:  # parent process
-                       children.append(pid)
-                       print("Accepted connection")
-                       print("Opened socket")
-                       print("Server IP addr and port:",
-                             sock.getsockname())
-                       print("Client IP addr and port:", client_addr)
-                    else:  # child process
-                        print("child process:", client_addr)
-                        handle_client(sock, delay)
-                        os.waitpid(os.getpid(), 0)
-                        os.exit(0)
+                    # pid = os.fork()
+                    # if pid > 0:  # parent process
+                    #    print("Accepted connection")
+                    #    print("Opened socket")
+                    #    print("Server IP addr and port:",
+                    #          sock.getsockname())
+                    #    print("Client IP addr and port:", client_addr)
+                    # else:  # child process
+                    #     # print("Child process:", client_addr)
+                    #     handle_client(sock, delay)
+                    #     os.waitpid(os.getpid(), 0)
+                    #     os.exit(0)
+                    print("Accepted connection")
+                    print("Opened socket")
+                    print("Server IP addr and port:",
+                            sock.getsockname())
+                    print("Client IP addr and port:", client_addr)
+                    process = multiprocessing.Process(
+                        target=handle_client, args=[sock, delay])
+                    process.start()
 
             except Exception as ex:
                 print(ex, file=sys.stderr)
