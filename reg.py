@@ -24,9 +24,12 @@ class ListWidget(wid.QListWidget):
         outputs:
         """
         print(self._args, item.data(core.Qt.UserRole))
-        query_server_regdetails(self._args, self._window, item.data(core.Qt.UserRole))
+        query_server_regdetails(
+            self._args, self._window, item.data(core.Qt.UserRole))
 
-#Query the server for class details
+# Query the server for class details
+
+
 def query_server_regdetails(args, window, classid):
     """
     inputs: command arguments, class id of clicked class
@@ -37,14 +40,15 @@ def query_server_regdetails(args, window, classid):
             sock.connect((args.host, args.port))
 
             out_flo = sock.makefile(mode="wb", encoding="utf-8")
-            pickle.dump(classid,out_flo)
+            pickle.dump(classid, out_flo)
             out_flo.flush()
 
             in_flo = sock.makefile(mode="r", encoding="utf-8")
             coursedetails = ""
             for line in in_flo.readlines():
-                coursedetails+=line
-            wid.QMessageBox.information(window, "Course Details" , coursedetails)
+                coursedetails += line
+            wid.QMessageBox.information(
+                window, "Course Details", coursedetails)
             in_flo.flush()
 
         if coursedetails == "":
@@ -53,7 +57,9 @@ def query_server_regdetails(args, window, classid):
     except Exception:
         print("A server error occurred. Please contact the system administrator.")
 
-#Query reg server
+# Query reg server
+
+
 def query_server_reg(args, query, list):
     """
     inputs: command arguments
@@ -81,10 +87,10 @@ def query_server_reg(args, query, list):
             for course in courses:
                 course_item = wid.QListWidgetItem()
                 course_item.setText(course.get('id').rjust(5)
-                                    +course.get('dept').rjust(4)
-                                    +course.get('coursenum').rjust(5)
-                                    +course.get('area').rjust(4)+" "
-                                    +course.get('title').ljust(100))
+                                    + course.get('dept').rjust(4)
+                                    + course.get('coursenum').rjust(5)
+                                    + course.get('area').rjust(4)+" "
+                                    + course.get('title').ljust(100))
                 course_item.setData(core.Qt.UserRole, course.get('id'))
                 list.insertItem(index, course_item)
                 index += 1
@@ -93,6 +99,8 @@ def query_server_reg(args, query, list):
         print("A server error occurred. Please contact the system administrator.")
 
 # Runs Application
+
+
 def main(args):
     """
     input: host, port arguments
@@ -101,8 +109,10 @@ def main(args):
     """
     app = wid.QApplication(sys.argv)
 
-    dept_label = wid.QLabel(" Department: ", alignment=core.Qt.AlignRight)
-    coursenum_label = wid.QLabel(" Number: ", alignment=core.Qt.AlignRight)
+    dept_label = wid.QLabel(
+        " Department: ", alignment=core.Qt.AlignRight)
+    coursenum_label = wid.QLabel(
+        " Number: ", alignment=core.Qt.AlignRight)
     area_label = wid.QLabel(" Area: ", alignment=core.Qt.AlignRight)
     title_label = wid.QLabel(" Title: ", alignment=core.Qt.AlignRight)
 
@@ -114,29 +124,28 @@ def main(args):
     return_list = ListWidget()
     return_list._args = args
 
-
     layout = wid.QGridLayout()
 
     layout.setSpacing(5)
     layout.setContentsMargins(0, 0, 0, 0)
 
     layout.addWidget(dept_label, 0, 1)
-    layout.addWidget(coursenum_label, 1,1)
+    layout.addWidget(coursenum_label, 1, 1)
     layout.addWidget(area_label, 2, 1)
-    layout.addWidget(title_label,3, 1)
+    layout.addWidget(title_label, 3, 1)
 
     layout.addWidget(dept_input, 0, 2)
-    layout.addWidget(coursenum_input, 1,2)
+    layout.addWidget(coursenum_input, 1, 2)
     layout.addWidget(area_input, 2, 2)
-    layout.addWidget(title_input ,3, 2)
+    layout.addWidget(title_input, 3, 2)
 
-    layout.addWidget(return_list,4,0,1,5)
+    layout.addWidget(return_list, 4, 0, 1, 5)
 
-    layout.setColumnStretch(0,1)
-    layout.setColumnStretch(4,1)
-    layout.setColumnStretch(1,1)
-    layout.setColumnStretch(2,100)
-    layout.setColumnStretch(3,1)
+    layout.setColumnStretch(0, 1)
+    layout.setColumnStretch(4, 1)
+    layout.setColumnStretch(1, 1)
+    layout.setColumnStretch(2, 100)
+    layout.setColumnStretch(3, 1)
 
     frame = wid.QFrame()
     frame.setLayout(layout)
@@ -150,43 +159,42 @@ def main(args):
     return_list.itemClicked.connect(return_list.clicked)
 
     dept_input.textEdited.connect(lambda: query_server_reg(args,
-        {'dept':dept_input.text(),
-        'num':coursenum_input.text(),
-        'area':area_input.text(),
-        'title':title_input.text()},return_list))
+                                                           {'dept': dept_input.text(),
+                                                            'num': coursenum_input.text(),
+                                                               'area': area_input.text(),
+                                                               'title': title_input.text()}, return_list))
     coursenum_input.textEdited.connect(lambda: query_server_reg(args,
-        {'dept':dept_input.text(),
-        'num':coursenum_input.text(),
-        'area':area_input.text(),
-        'title':title_input.text()},return_list))
+                                                                {'dept': dept_input.text(),
+                                                                 'num': coursenum_input.text(),
+                                                                    'area': area_input.text(),
+                                                                    'title': title_input.text()}, return_list))
     area_input.textEdited.connect(lambda: query_server_reg(args,
-        {'dept':dept_input.text(),
-        'num':coursenum_input.text(),
-        'area':area_input.text(),
-        'title':title_input.text()},return_list))
+                                                           {'dept': dept_input.text(),
+                                                            'num': coursenum_input.text(),
+                                                               'area': area_input.text(),
+                                                               'title': title_input.text()}, return_list))
     title_input.textEdited.connect(lambda: query_server_reg(args,
-        {'dept':dept_input.text(),
-        'num':coursenum_input.text(),
-        'area':area_input.text(),
-        'title':title_input.text()},return_list))
-
+                                                            {'dept': dept_input.text(),
+                                                             'num': coursenum_input.text(),
+                                                                'area': area_input.text(),
+                                                                'title': title_input.text()}, return_list))
 
     query_server_reg(args,
-        {'dept':dept_input.text(),
-        'num':coursenum_input.text(),
-        'area':area_input.text(),
-        'title':title_input.text()},return_list)
+                     {'dept': dept_input.text(),
+                      'num': coursenum_input.text(),
+                      'area': area_input.text(),
+                      'title': title_input.text()}, return_list)
 
     window.show()
     sys.exit(app.exec_())
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser( description='Server for the registrar application',
-        allow_abbrev=False, exit_on_error=True)
-    parser.add_argument('host',type=str,
-        help='the host on which the server is running')
-    parser.add_argument('port',type=int,
-        help='the port at which the server is listening')
+    parser = argparse.ArgumentParser(description='Server for the registrar application',
+                                     allow_abbrev=False)
+    parser.add_argument('host', type=str,
+                        help='the host on which the server is running')
+    parser.add_argument('port', type=int,
+                        help='the port at which the server is listening')
     args = parser.parse_args()
     main(args)

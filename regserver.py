@@ -229,24 +229,29 @@ def get_class_details(class_id, out_flo):
 def handle_client(sock, delay):
     """
     input:
-    client-socket, 
+    client-socket,
     busy-wait delay
     output:
     prints-logs
     """
+    print('Forked child process')
+
     try:
         # Read query from client
         in_flo = sock.makefile(mode="rb", encoding="utf-8")
         query = pickle.load(in_flo)
         in_flo.flush()
         print("Read from client: " + str(query))
+
+        # Delay
         consume_cpu_time(delay)
+
         if type(query) is dict:
             # Run SQLite functions and find classes
             classes = filter_classes(query.get('dept'),
-                                    query.get('num'),
-                                    query.get('area'),
-                                    query.get('title'))
+                                     query.get('num'),
+                                     query.get('area'),
+                                     query.get('title'))
             # Write classes back to client
             out_flo = sock.makefile(mode="wb", encoding="utf-8")
             pickle.dump(classes, out_flo)
@@ -258,6 +263,10 @@ def handle_client(sock, delay):
             class_details = get_class_details(query, out_flo)
             out_flo.flush()
             print("Wrote class details ("+query+") to client")
+
+        sock.close()
+        print('Closed socket in child process')
+
     except Exception as ex:
         print(ex, file=sys.stderr)
         sys.exit(1)
@@ -273,17 +282,17 @@ def main(args):
     try:
         delay = args.delay
         port = args.port
-        server_sock = socket.socket()
-        print("Opened server socket")
 
+        server_sock = socket.socket()
         if os.name != "nt":
             server_sock.setsockopt(
                 socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            server_sock.bind(("", port))
+        print("Opened server socket")
 
+        server_sock.bind(("", port))
         print("Bound server socket to port")
-        server_sock.listen()
 
+        server_sock.listen()
         print("Listening")
 
         while True:
@@ -305,7 +314,7 @@ def main(args):
                     print("Accepted connection")
                     print("Opened socket")
                     print("Server IP addr and port:",
-                            sock.getsockname())
+                          sock.getsockname())
                     print("Client IP addr and port:", client_addr)
                     process = multiprocessing.Process(
                         target=handle_client, args=[sock, delay])
@@ -322,7 +331,7 @@ def main(args):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description='Server for the registrar application',
-        allow_abbrev=False, exit_on_error=True)
+        allow_abbrev=False)
 
     parser.add_argument('port', metavar='port', type=int,
                         help='the port at which the server should listen')
