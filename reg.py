@@ -114,7 +114,6 @@ def main(args):
     return_list = ListWidget()
     return_list._args = args
 
-    search_button = wid.QPushButton("Search")
 
     layout = wid.QGridLayout()
 
@@ -131,7 +130,6 @@ def main(args):
     layout.addWidget(area_input, 2, 2)
     layout.addWidget(title_input ,3, 2)
 
-    layout.addWidget(search_button,0,3,4,1)
     layout.addWidget(return_list,4,0,1,5)
 
     layout.setColumnStretch(0,1)
@@ -151,7 +149,22 @@ def main(args):
     return_list._window = window
     return_list.itemClicked.connect(return_list.clicked)
 
-    search_button.clicked.connect(lambda: query_server_reg(args,
+    dept_input.textEdited.connect(lambda: query_server_reg(args,
+        {'dept':dept_input.text(),
+        'num':coursenum_input.text(),
+        'area':area_input.text(),
+        'title':title_input.text()},return_list))
+    coursenum_input.textEdited.connect(lambda: query_server_reg(args,
+        {'dept':dept_input.text(),
+        'num':coursenum_input.text(),
+        'area':area_input.text(),
+        'title':title_input.text()},return_list))
+    area_input.textEdited.connect(lambda: query_server_reg(args,
+        {'dept':dept_input.text(),
+        'num':coursenum_input.text(),
+        'area':area_input.text(),
+        'title':title_input.text()},return_list))
+    title_input.textEdited.connect(lambda: query_server_reg(args,
         {'dept':dept_input.text(),
         'num':coursenum_input.text(),
         'area':area_input.text(),
