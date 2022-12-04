@@ -8,7 +8,12 @@ import pickle
 import argparse
 import contextlib
 import sqlite3
+import time
 
+def consume_cpu_time(delay):
+    initial_time = time.process_time()
+    while (time.process_time() - initial_time) < delay:
+        pass
 
 # Sanitize text input
 def sanitize(field):
@@ -215,12 +220,10 @@ def get_class_details(class_id, out_flo):
         print(sys.argv[0] + ": " + str(ex), file=sys.stderr)
 
 # Client handler
-
-
-def handle_client(sock):
+def handle_client(sock, delay):
     """
     input:
-    client-socket
+    client-socket, busy-wait delay
     output:
     prints-logs
     """
@@ -229,6 +232,7 @@ def handle_client(sock):
     query = pickle.load(in_flo)
     in_flo.flush()
     print("Read from client: " + str(query))
+    consume_cpu_time(delay)
     if type(query) is dict:
         # Run SQLite functions and find classes
         classes = filter_classes(query.get('dept'),
@@ -287,8 +291,8 @@ def main(args):
                        print("Client IP addr and port:", client_addr)
                     else:  # child process
                         print("child process:", client_addr)
-                        handle_client(sock)
-                        os.waitpid(os.getpid(), delay)
+                        handle_client(sock, delay)
+                        os.waitpid(os.getpid(), 0)
                         os.exit(0)
 
             except Exception as ex:
