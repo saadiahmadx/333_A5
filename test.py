@@ -1,16 +1,14 @@
-"""
-Server code for Princeton Registrar Application with GUI
-"""
-import sys
+import argparse
 import contextlib
+import os
 import sqlite3
+import sys
+import socket
+import pickle
+import textwrap
 
 # Sanitize text input
 def sanitize(field):
-    """
-    input: string field
-    output: string with '%' and '_' formatted for SQL
-    """
     sanitized = field.replace('%', '\\%')
     sanitized = sanitized.replace('_', '\\_')
     return sanitized
@@ -19,14 +17,6 @@ def sanitize(field):
 def generate_query(dept, num, area, title):
     """
     Generates query body given inputs
-    inputs:
-    department,
-    course #,
-    course area,
-    course title
-    output:
-    generated SQL query body,
-    generated SQL query args
     """
     query_body=''
     if(dept or num or area or title):
@@ -110,13 +100,14 @@ def filter_classes(dept=None, num=None, area=None, title=None):
 
     except Exception as ex:
         print(sys.argv[0] + ": " +str(ex), file=sys.stderr)
-        return 0
+        pass
 
 #returns details for a given class_id
-def get_class_details(class_id):
+def get_class_details(class_id, out_flo):
     """
     Input:
     class_id
+
     Output:
     -> Course ID
     -> Days
@@ -131,9 +122,8 @@ def get_class_details(class_id):
     -> Prereqs
     -> Professor
     """
-    output = {}
     try:
-        with sqlite3.connect("reg.sqlite",
+        with sqlite3.connect('reg.sqlite',
         isolation_level = None) as connection:
             with contextlib.closing(connection.cursor()) as cursor:
                 class_query = """
@@ -172,35 +162,108 @@ def get_class_details(class_id):
                     +class_id+" exists",
                     file=sys.stderr)
 
-                output["course_id"] = str(class_result[1])
-                output["days"] = str(class_result[2])
-                output["start_time"] = str(class_result[3])
-                output["end_time"] = str(class_result[4])
-                output["building"] = str(class_result[5])
-                output["room"] = str(class_result[6])
+                out_flo.write("Course Id: "+str(class_result[1])+"\n\n")
+                out_flo.write("Days: "+class_result[2]+"\n")
+                out_flo.write("Start time: "+class_result[3]+"\n")
+                out_flo.write("End time: "+class_result[4]+"\n")
+                out_flo.write("Building: "+class_result[5]+"\n")
+                out_flo.write("Room: "+class_result[6]+"\n")
 
                 cursor.execute(cross_query, [class_id])
                 cross_result = cursor.fetchall()
-                dept_and_num = []
                 for c_result in cross_result:
-                    dept_and_num.append(c_result[0]+" "+ c_result[1])
+                    out_flo.write("\nDept and Number: "+c_result[0]
+                    +" "+ c_result[1])
 
-                output["dept_and_num"] = dept_and_num
+                out_flo.write("\n\n"+"Area: "+class_result[8]+"\n")
 
-                output["area"] = class_result[8]
-                output["title"] = class_result[9]
-                output["description"] = class_result[10]
-                output["prerequisites"] = class_result[11]
+                out_flo.write("\n" + "Title: "+class_result[9] + "\n")
+
+                out_flo.write("\n" + "Description: "+class_result[10] + "\n")
+
+                out_flo.write("\n" + "Prerequisites: "+class_result[11] + "\n")
 
                 cursor.execute(prof_query, [class_id])
                 prof_result = cursor.fetchall()
-                professors = []
                 for prof in prof_result:
-                    professors.append(prof[0])
-
-                output["profs"] = professors
-                return output
+                    out_flo.write("\n"+"Professor: "+prof[0])
 
     except Exception as ex:
         print(sys.argv[0] + ": " +str(ex), file=sys.stderr)
-        return 0
+        pass
+
+# Client handler
+def handle_client(sock):
+    # Read query from client
+    in_flo = sock.makefile(mode="rb", encoding="utf-8")
+    query = pickle.load(in_flo)
+    in_flo.flush()
+    print("Read from client: " + query.__str__())
+
+    if type(query) is dict:
+        # Run SQLite functions and find classes
+        classes = filter_classes(query.get('dept'),query.get('num'),query.get('area'),query.get('title'))
+        # Write classes back to client
+        out_flo = sock.makefile(mode="wb", encoding="utf-8")
+        pickle.dump(classes, out_flo)
+        out_flo.flush()
+        print("Wrote "+str(len(classes))+" classes to client")
+    else:
+        # Write classes back to client
+        out_flo = sock.makefile(mode="w", encoding="utf-8")
+        class_details = get_class_details(query,out_flo)
+        out_flo.flush()
+        print("Wrote class details ("+query+") to client")
+
+
+
+
+# Main server code
+def main(args):
+    # Check that port is between 10000-60000
+    # if args.port < 10000 or args.port > 60000:
+    #     print("Usage: python %s host port" % sys.argv[0])
+    #     sys.exit(2)
+
+    try:
+        port = args.port
+        server_sock = socket.socket()
+        print("Opened server socket")
+
+        if os.name != "nt":
+            server_sock.setsockopt(
+            socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            server_sock.bind(("", port))
+
+        print("Bound server socket to port")
+        server_sock.listen()
+
+        print("Listening")
+
+        while True:
+            try:
+                sock, client_addr = server_sock.accept()
+                with sock:
+                    print("Accepted connection")
+                    print("Opened socket")
+                    print("Server IP addr and port:",
+                    sock.getsockname())
+                    print("Client IP addr and port:", client_addr)
+                    handle_client(sock)
+
+            except Exception as ex:
+                print(ex, file=sys.stderr)
+
+    except Exception as ex:
+        print(ex, file=sys.stderr)
+        sys.exit(2)
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser( description='Server for the registrar application',
+        allow_abbrev=False, exit_on_error=True)
+
+    parser.add_argument('port', metavar='port',type=int,
+        help='the port at which the server should listen')
+
+    args = parser.parse_args()
+    main(args)
