@@ -110,7 +110,7 @@ def query_server_regdetails(input_args, window, classid):
 # Query reg server
 
 
-def query_server_reg(args, query, list):
+def query_server_reg(query_args, query, list):
     """
     inputs: command arguments
 
@@ -119,7 +119,7 @@ def query_server_reg(args, query, list):
 
     try:
         with socket.socket() as sock:
-            sock.connect((args.host, args.port))
+            sock.connect((query_args.host, query_args.port))
 
             out_flo = sock.makefile(mode="wb", encoding="utf-8")
             pickle.dump(query, out_flo)
@@ -150,7 +150,7 @@ def query_server_reg(args, query, list):
         Please contact the system administrator.""")
 
 
-def create_widgets(args):
+def create_widgets(widget_args):
     dept_label = wid.QLabel(
         " Department: ", alignment=core.Qt.AlignRight)
     coursenum_label = wid.QLabel(
@@ -164,7 +164,7 @@ def create_widgets(args):
     title_input = wid.QLineEdit("")
 
     return_list = ListWidget()
-    return_list._args = args
+    return_list._args = widget_args
 
     layout = wid.QGridLayout()
 

@@ -106,7 +106,7 @@ def filter_classes(dept=None, num=None, area=None, title=None):
                         ON cl.courseid = cross.courseid
                 """
                 query_body, query_args = generate_query(dept,
-                                                        num, area, title)
+                    num, area, title)
                 query_closing = """
                     ORDER BY cross.dept ASC,
                     cross.coursenum ASC,
@@ -187,10 +187,11 @@ def get_class_details(class_id, out_flo):
                 class_result = cursor.fetchone()
 
                 if not class_result:
-                    return print(sys.argv[0] +
-                                 ": no class with classid "
-                                 + class_id+" exists",
-                                 file=sys.stderr)
+                    print(sys.argv[0] +
+                    ": no class with classid "
+                    + class_id+" exists",
+                    file=sys.stderr)
+                    return
 
                 out_flo.write("Course Id: "+str(class_result[1])+"\n\n")
                 out_flo.write("Days: "+class_result[2]+"\n")
@@ -222,7 +223,6 @@ def get_class_details(class_id, out_flo):
 
     except Exception as ex:
         print(sys.argv[0] + ": " + str(ex), file=sys.stderr)
-
 # Client handler
 
 
@@ -246,7 +246,8 @@ def handle_client(sock, delay):
         # Delay
         consume_cpu_time(delay)
 
-        if type(query) is dict:
+
+        if isinstance(query, dict):
             # Run SQLite functions and find classes
             classes = filter_classes(query.get('dept'),
                                      query.get('num'),
@@ -333,10 +334,14 @@ if __name__ == '__main__':
         description='Server for the registrar application',
         allow_abbrev=False)
 
-    parser.add_argument('port', metavar='port', type=int,
-                        help='the port at which the server should listen')
+    parser.add_argument('port',
+        metavar='port',
+        type=int,
+        help='the port at which the server should listen')
 
-    parser.add_argument('delay', metavar='delay', type=float,
-                        help='server busy-wait delay (in seconds)')
+    parser.add_argument('delay',
+        metavar='delay',
+        type=float,
+        help='server busy-wait delay (in seconds)')
 
     main(parser.parse_args())
