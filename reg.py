@@ -105,7 +105,8 @@ def query_server_regdetails(args, window, classid):
             print("The reg server crashed", file=sys.stderr)
 
     except Exception:
-        print("A server error occurred. Please contact the system administrator.")
+        print("""A server error occurred.
+        Please contact the system administrator.""")
 
 # Query reg server
 
@@ -146,7 +147,8 @@ def query_server_reg(args, query, list):
                 index += 1
         sock.close()
     except Exception:
-        print("A server error occurred. Please contact the system administrator.")
+        print("""A server error occurred.
+        Please contact the system administrator.""")
 
 
 def create_widgets(args):
@@ -285,11 +287,14 @@ def main(args):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Server for the registrar application',
-                                     allow_abbrev=False)
-    parser.add_argument('host', type=str,
-                        help='the host on which the server is running')
-    parser.add_argument('port', type=int,
-                        help='the port at which the server is listening')
+    parser = argparse.ArgumentParser(
+                description='Server for the registrar application',
+                allow_abbrev=False)
+    parser.add_argument('host',
+                type=str,
+                help='the host on which the server is running')
+    parser.add_argument('port',
+                type=int,
+                help='the port at which the server is listening')
     args = parser.parse_args()
     main(args)
