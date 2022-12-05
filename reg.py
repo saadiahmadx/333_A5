@@ -10,7 +10,6 @@ import threading
 import queue as queuemod
 import PyQt5.QtCore as core
 import PyQt5.QtWidgets as wid
-import PyQt5.QtGui as gui
 
 
 class WorkerThread (threading.Thread):
@@ -230,9 +229,7 @@ def reg_slot_helper(queue, return_list):
                     core.Qt.UserRole, course.get('id'))
                 return_list.insertItem(index, course_item)
                 index += 1
-        else:
-            ex = data
-            print('not successfull')
+
         return_list.repaint()
 
 # Runs Application
