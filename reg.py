@@ -19,16 +19,16 @@ class WorkerThread (threading.Thread):
         threading.Thread.__init__(self)
         self._host = host
         self._port = port
-        self._dept = input.get("dept")
-        self._coursenum = input.get("coursenum")
-        self._area = input.get("area")
-        self._title = input.get("title")
+        self._input = {}
+        self._input['dept'] =  input["dept"]
+        self._input['coursenum'] = input["coursenum"]
+        self._input['area'] = input["area"]
+        self._input['title'] = input["title"]
         self._queue = queue
         self._should_stop = False
 
     def stop(self):
         self._should_stop = True
-
     def run(self):
         print("RUNNING WORKER THREAD")
         try:
@@ -38,10 +38,10 @@ class WorkerThread (threading.Thread):
                 print("WORKER THREAD CONNECTED")
 
                 out_flo = sock.makefile(mode="wb", encoding="utf-8")
-                pickle.dump({'dept': self._dept,
-                             'num': self._coursenum,
-                             'area': self._area,
-                             'title': self._title}, out_flo)
+                pickle.dump({'dept': self._input['dept'],
+                             'num': self._input['coursenum'],
+                             'area': self._input['area'],
+                             'title': self._input['title']}, out_flo)
                 out_flo.flush()
                 print("OUTFLOW")
 
@@ -80,14 +80,14 @@ class ListWidget(wid.QListWidget):
 # Query the server for class details
 
 
-def query_server_regdetails(args, window, classid):
+def query_server_regdetails(input_args, window, classid):
     """
     inputs: command arguments, class id of clicked class
     outputs: (GUI) show additional class details
     """
     try:
         with socket.socket() as sock:
-            sock.connect((args.host, args.port))
+            sock.connect((input_args.host, input_args.port))
 
             out_flo = sock.makefile(mode="wb", encoding="utf-8")
             pickle.dump(classid, out_flo)
@@ -238,7 +238,7 @@ def reg_slot_helper(queue, return_list):
 # Runs Application
 
 
-def main(args):
+def main(main_args):
     """
     input: host, port arguments
 
@@ -247,7 +247,7 @@ def main(args):
     app = wid.QApplication(sys.argv)
 
     window, dept_input, coursenum_input, area_input, title_input, return_list = create_widgets(
-        args)
+        main_args)
 
     queue = queuemod.Queue()
 
@@ -273,8 +273,8 @@ def main(args):
             worker_thread.stop()
 
         worker_thread = WorkerThread(
-            args.host,
-            args.port,
+            main_args.host,
+            main_args.port,
             {"dept":dept,
                 "coursenum":coursenum,
                 "area":area,
