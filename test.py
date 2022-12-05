@@ -8,50 +8,56 @@ import pickle
 import textwrap
 
 # Sanitize text input
+
+
 def sanitize(field):
     sanitized = field.replace('%', '\\%')
     sanitized = sanitized.replace('_', '\\_')
     return sanitized
 
 # Generate query based on available user input
+
+
 def generate_query(dept, num, area, title):
     """
     Generates query body given inputs
     """
-    query_body=''
-    if(dept or num or area or title):
+    query_body = ''
+    if (dept or num or area or title):
         query_body = "WHERE "
     first = True
     query_args = []
     if dept:
         if not first:
-            query_body+= ' AND '
-        query_body+= "cross.dept LIKE ?"
+            query_body += ' AND '
+        query_body += "cross.dept LIKE ?"
         query_args.append("%"+sanitize(dept)+"%")
         first = False
     if area:
         if not first:
-            query_body+= ' AND '
-        query_body+= "co.area LIKE ?"
+            query_body += ' AND '
+        query_body += "co.area LIKE ?"
         query_args.append("%"+sanitize(area)+"%")
         first = False
     if title:
         if not first:
-            query_body+= ' AND '
-        query_body+= "co.title LIKE ?"
+            query_body += ' AND '
+        query_body += "co.title LIKE ?"
         query_args.append("%"+sanitize(title.lower())+"%")
         first = False
     if num:
         if not first:
-            query_body+= ' AND '
-        query_body+= "cross.coursenum LIKE ?"
+            query_body += ' AND '
+        query_body += "cross.coursenum LIKE ?"
         query_args.append("%"+sanitize(str(num))+"%")
         first = False
-    if(dept or num or area or title):
+    if (dept or num or area or title):
         query_body += "ESCAPE '\\'"
     return query_body, query_args
 
-#returns all classes with specified attrebutes
+# returns all classes with specified attrebutes
+
+
 def filter_classes(dept=None, num=None, area=None, title=None):
     """
     Inputs:
@@ -64,7 +70,7 @@ def filter_classes(dept=None, num=None, area=None, title=None):
     """
     try:
         with sqlite3.connect("reg.sqlite",
-            isolation_level = None) as connection:
+                             isolation_level=None) as connection:
             with contextlib.closing(connection.cursor()) as cursor:
                 query_head = """
                     SELECT cl.classid, cross.dept, cross.coursenum,
@@ -78,31 +84,33 @@ def filter_classes(dept=None, num=None, area=None, title=None):
                         ON cl.courseid = cross.courseid
                 """
                 query_body, query_args = generate_query(dept,
-                num,area,title)
+                                                        num, area, title)
                 query_closing = """
                     ORDER BY cross.dept ASC,
                     cross.coursenum ASC,
                     cl.classid ASC
                 """
                 cursor.execute(query_head+query_body+query_closing,
-                query_args)
+                               query_args)
                 results = cursor.fetchall()
 
                 output = []
                 for result in results:
                     class_object = {'id': str(result[0]),
-                                    'dept':str(result[1]),
-                                    'coursenum':str(result[2]),
+                                    'dept': str(result[1]),
+                                    'coursenum': str(result[2]),
                                     'area': str(result[3]),
                                     'title': str(result[4])}
                     output.append(class_object)
                 return output
 
     except Exception as ex:
-        print(sys.argv[0] + ": " +str(ex), file=sys.stderr)
+        print(sys.argv[0] + ": " + str(ex), file=sys.stderr)
         pass
 
-#returns details for a given class_id
+# returns details for a given class_id
+
+
 def get_class_details(class_id, out_flo):
     """
     Input:
@@ -124,7 +132,7 @@ def get_class_details(class_id, out_flo):
     """
     try:
         with sqlite3.connect('reg.sqlite',
-        isolation_level = None) as connection:
+                             isolation_level=None) as connection:
             with contextlib.closing(connection.cursor()) as cursor:
                 class_query = """
                     SELECT *
@@ -158,9 +166,9 @@ def get_class_details(class_id, out_flo):
 
                 if not class_result:
                     return print(sys.argv[0] +
-                    ": no class with classid "
-                    +class_id+" exists",
-                    file=sys.stderr)
+                                 ": no class with classid "
+                                 + class_id+" exists",
+                                 file=sys.stderr)
 
                 out_flo.write("Course Id: "+str(class_result[1])+"\n\n")
                 out_flo.write("Days: "+class_result[2]+"\n")
@@ -173,15 +181,17 @@ def get_class_details(class_id, out_flo):
                 cross_result = cursor.fetchall()
                 for c_result in cross_result:
                     out_flo.write("\nDept and Number: "+c_result[0]
-                    +" "+ c_result[1])
+                                  + " " + c_result[1])
 
                 out_flo.write("\n\n"+"Area: "+class_result[8]+"\n")
 
                 out_flo.write("\n" + "Title: "+class_result[9] + "\n")
 
-                out_flo.write("\n" + "Description: "+class_result[10] + "\n")
+                out_flo.write("\n" + "Description: " +
+                              class_result[10] + "\n")
 
-                out_flo.write("\n" + "Prerequisites: "+class_result[11] + "\n")
+                out_flo.write("\n" + "Prerequisites: " +
+                              class_result[11] + "\n")
 
                 cursor.execute(prof_query, [class_id])
                 prof_result = cursor.fetchall()
@@ -189,10 +199,12 @@ def get_class_details(class_id, out_flo):
                     out_flo.write("\n"+"Professor: "+prof[0])
 
     except Exception as ex:
-        print(sys.argv[0] + ": " +str(ex), file=sys.stderr)
+        print(sys.argv[0] + ": " + str(ex), file=sys.stderr)
         pass
 
 # Client handler
+
+
 def handle_client(sock):
     # Read query from client
     in_flo = sock.makefile(mode="rb", encoding="utf-8")
@@ -202,7 +214,8 @@ def handle_client(sock):
 
     if type(query) is dict:
         # Run SQLite functions and find classes
-        classes = filter_classes(query.get('dept'),query.get('num'),query.get('area'),query.get('title'))
+        classes = filter_classes(query.get('dept'), query.get(
+            'num'), query.get('area'), query.get('title'))
         # Write classes back to client
         out_flo = sock.makefile(mode="wb", encoding="utf-8")
         pickle.dump(classes, out_flo)
@@ -211,11 +224,9 @@ def handle_client(sock):
     else:
         # Write classes back to client
         out_flo = sock.makefile(mode="w", encoding="utf-8")
-        class_details = get_class_details(query,out_flo)
+        class_details = get_class_details(query, out_flo)
         out_flo.flush()
         print("Wrote class details ("+query+") to client")
-
-
 
 
 # Main server code
@@ -232,7 +243,7 @@ def main(args):
 
         if os.name != "nt":
             server_sock.setsockopt(
-            socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             server_sock.bind(("", port))
 
         print("Bound server socket to port")
@@ -247,7 +258,7 @@ def main(args):
                     print("Accepted connection")
                     print("Opened socket")
                     print("Server IP addr and port:",
-                    sock.getsockname())
+                          sock.getsockname())
                     print("Client IP addr and port:", client_addr)
                     handle_client(sock)
 
@@ -258,12 +269,13 @@ def main(args):
         print(ex, file=sys.stderr)
         sys.exit(2)
 
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser( description='Server for the registrar application',
-        allow_abbrev=False, exit_on_error=True)
 
-    parser.add_argument('port', metavar='port',type=int,
-        help='the port at which the server should listen')
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='Server for the registrar application',
+                                     allow_abbrev=False, exit_on_error=True)
+
+    parser.add_argument('port', metavar='port', type=int,
+                        help='the port at which the server should listen')
 
     args = parser.parse_args()
     main(args)
