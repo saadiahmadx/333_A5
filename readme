@@ -5,7 +5,8 @@ Jamil Saadi Ahmad
 
 Assignment 5
 
-Nick: 
+Nick: I fixed the worker threads to set up asynchronous updating of the GUI. I was responsible for debugging
+and working on the helper functions.
 
 Saadi: I implemented the code changes from Assignment 2 to refresh output on input change and concurrent processes for reg and regserver
 
@@ -13,9 +14,6 @@ Help Received: N/A
 
 Information Used:
 
-Time Spent:
+Time Spent: 4
 
 Assesment:
-
-
-
