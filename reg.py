@@ -15,14 +15,14 @@ import PyQt5.QtGui as gui
 
 class WorkerThread (threading.Thread):
 
-    def __init__(self, host, port, dept, coursenum, area, title, queue):
+    def __init__(self, host, port, input, queue):
         threading.Thread.__init__(self)
         self._host = host
         self._port = port
-        self._dept = dept
-        self._coursenum = coursenum
-        self._area = area
-        self._title = title
+        self._dept = input.get("dept")
+        self._coursenum = input.get("coursenum")
+        self._area = input.get("area")
+        self._title = input.get("title")
         self._queue = queue
         self._should_stop = False
 
@@ -273,7 +273,13 @@ def main(args):
             worker_thread.stop()
 
         worker_thread = WorkerThread(
-            args.host, args.port, dept, coursenum, area, title, queue)
+            args.host,
+            args.port,
+            {"dept":dept,
+                "coursenum":coursenum,
+                "area":area,
+                "title":title},
+            queue)
         worker_thread.start()
 
     dept_input.textChanged.connect(reg_slot)
